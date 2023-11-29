@@ -2,13 +2,7 @@
 
 ### Author: RafaelTorices
 
-![Alt text](images/gitflow.png)
-
-The repository uses the Gitflow workflow. The repository branches:
-
-- **main**: Contains the stable code of the application.
-- **develop**: Contains the code in development of the application.
-- **release**: Contains the code of the releases of the application.
+This repository contains an example of a CI/CD pipeline with CircleCI for a simple Python application.
 
 ## CI/CD pipeline
 
@@ -54,6 +48,10 @@ The pipeline is triggered when:
 The pipeline generates the following artifacts:
 
 - Docker image of the application in DockerHub: https://hub.docker.com/repository/docker/rafacv99/pycalculator/general
+
+> #### Note (DockerHub)
+>
+> The pipeline contains a job for the upload of the docker image to DockerHub. For use the job, you need to create a repository in DockerHub (https://hub.docker.com/) and you need to create a token in DockerHub and add it to the CircleCI environment variables with the name DOCKERHUB_TOKEN.
 
 > #### Note (SonarCloud)
 >
