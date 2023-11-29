@@ -2,7 +2,7 @@
 
 ### Author: RafaelTorices
 
-This repository contains an example of a CI/CD pipeline with CircleCI for a simple Python application.
+This repository contains an example of a CI/CD pipeline with CircleCI for a simple Python application (https://github.com/RafaTorices/pycalculator).
 
 ## CI/CD pipeline
 
