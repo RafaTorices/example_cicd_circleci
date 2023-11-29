@@ -15,7 +15,7 @@ This is a simple example of a web calculator using Python and Flask.
 
 ### Installing
 
-1. Clone the repository
+1. Clone the repository (https://github.com/RafaTorices/pycalculator)
 2. Install the requirements
 
 ```
