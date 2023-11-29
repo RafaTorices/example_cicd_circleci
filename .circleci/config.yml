@@ -1,0 +1,240 @@
+# CircleCI
+
+# Version CircleCI
+version: 2.1
+
+# Executors that will be used
+executors:
+  # Executor name
+  docker-builder:
+    # Docker image
+    docker:
+      - image: cimg/python:3.11 # Python 3.11
+  # Executor name
+  docker-publisher:
+    # Environment variables
+    environment:
+      IMAGE_TAG: rafacv99/pycalculator:latest
+      DOCKERHUB_USERNAME: rafacv99
+    # Docker image
+    docker:
+      - image: docker:stable # Docker image stable
+
+# Default configuration
+defaults: &defaults
+  working_directory: ~/app # Working_directory: ~/app
+  # Executor that will be used
+  executor: docker-builder
+
+# orbs:
+#   sonarcloud: sonarsource/sonarcloud@2.0.0
+
+# Jobs that will be executed
+jobs:
+  # Job name
+  app-build:
+    # Default configuration
+    <<: *defaults
+    # Steps that will be executed
+    steps:
+      # Checkout the code from the repository
+      - checkout
+      # Restore the virtual environment for the next job for persisting data
+      - restore_cache:
+          keys:
+            - python-dependencies-{{ checksum "requirements.txt" }}
+            - python-dependencies-
+      # Install package python3-pip for install dependencies
+      # Create virtual environment for python3
+      # Install dependencies with pip of requirements.txt
+      - run:
+          name: Build App and Install Dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install python3-pip
+            pip install --upgrade pip
+            python3 -m venv env
+            source env/bin/activate
+            pip install -r requirements.txt
+            pip install --upgrade pip
+      # Save the virtual environment for the next job for persisting data
+      - save_cache:
+          key: python-dependencies-{{ checksum "requirements.txt" }}
+          paths:
+            - ./env
+          #key: v1-dependencies-{{ checksum "requirements.txt" }}
+      # Save the virtual environment for the next job for persisting data
+      - persist_to_workspace:
+          root: ~/app
+          paths:
+            - .
+  # Job name
+  app-tests:
+    # Default configuration
+    <<: *defaults
+    # Steps that will be executed
+    steps:
+      # Attach the workspace from the previous job for persisting data
+      - attach_workspace:
+          at: ~/app
+      # Run linter pylint to check code of app calculator.py
+      - run:
+          name: Run Lint Pylint
+          command: |
+            # Source env
+            source env/bin/activate
+            # Run linter pylint to check code of app calculator.py
+            pylint src/calculator.py
+      # Run linter flake8 to check code of app calculator.py
+      - run:
+          name: Run Lint Flake8
+          command: |
+            # Source env
+            source env/bin/activate
+            # Run linter flake8 to check code of app calculator.py
+            flake8 src/calculator.py
+      # Run test coverage with pytest
+      - run:
+          name: Run Tests Coverage
+          command: |
+            # Source env
+            source env/bin/activate
+            # Create directorys for test results
+            mkdir docs-covtests-reports
+            # Run test coverage with pytest
+            coverage run -m pytest tests/test_calculator.py
+            python3 -m pytest --cov=src --cov-report=xml:docs-covtests-reports/coverage.xml
+            coverage html -d ./docs-covtests-reports
+      # Generate artifacts of test coverage
+      - store_artifacts:
+          path: docs-covtests-reports
+          destination: docs-covtests-reports
+      # Run test with pytest
+      - run:
+          name: Run Tests Pytest
+          command: |
+            # Source env
+            source env/bin/activate
+            # Run test with pytest
+            python3 -m pytest
+            # Create directorys for test results
+            mkdir docs-pytests-reports
+            # Generate report html of test results
+            python3 -m pytest --html=./docs-pytests-reports/report.html
+            # Generate report xml of test results
+            python3 -m pytest --junitxml=./docs-pytests-reports/report.xml
+      # Generate artifacts of test results
+      - store_test_results:
+          path: docs-pytests-reports/report.xml
+      - store_artifacts:
+          path: docs-pytests-reports
+          destination: docs-pytests-reports
+      # - sonarcloud/scan
+  # Job name
+  app-docs:
+    # Default configuration
+    <<: *defaults
+    # Steps that will be executed
+    steps:
+      # Attach the workspace from the previous job for persisting data
+      - attach_workspace:
+          at: ~/app
+      - run:
+          name: Generate Docs
+          command: |
+            # Create directorys for documentation of code app
+            mkdir docs-html
+            # Source env
+            source env/bin/activate
+            # Generate documentation of code app with pdoc
+            pdoc src/calculator.py -o ./docs-html
+      # Generate artifacts of documentation
+      - store_artifacts:
+          path: docs-html
+          destination: docs-html
+  # Job name
+  app-release:
+    # Default configuration
+    <<: *defaults
+    # Steps that will be executed
+    steps:
+      # Attach the workspace from the previous job for persisting data
+      - attach_workspace:
+          at: ~/app
+      - run:
+          name: Build Release Package
+          command: |
+            # Source env
+            source env/bin/activate
+             # Build release package app
+            python3 -m build
+      - store_artifacts:
+          path: dist
+          destination: dist
+  # Job name
+  app-deploy:
+    # Directory where the job will be executed
+    working_directory: ~/app
+    # Executor that will be used
+    executor: docker-publisher
+    # Steps that will be executed
+    steps:
+      # Checkout the code from the repository
+      - checkout
+      # Config remote docker for execute docker commands
+      - setup_remote_docker
+      # Attach the workspace from the previous job for persisting data
+      - attach_workspace:
+          at: ~/app
+      - run:
+          name: Build Docker Image
+          command: |
+            docker build --tag "${IMAGE_TAG}" .
+            docker images
+            echo "${DOCKERHUB_PASS}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+            docker push "${IMAGE_TAG}"
+
+# Workflows that will be executed
+workflows:
+  # Workflow name
+  app-workflow:
+    # Jobs that will be executed
+    jobs:
+      # Job name
+      - app-build:
+          context: SonarCloud
+      - app-tests:
+          context: SonarCloud
+          requires:
+            - app-build
+          filters:
+            branches:
+              ignore:
+                - main
+      - app-docs:
+          context: SonarCloud
+          requires:
+            - app-build
+          filters:
+            branches:
+              ignore:
+                - main
+      - app-release:
+          requires:
+            - app-build
+            - app-tests
+            - app-docs
+          filters:
+            tags:
+              only:
+                - /^v.*/
+            branches:
+              ignore:
+                - main
+      - app-deploy:
+          requires:
+            - app-build
+          filters:
+            branches:
+              only:
+                - main

@@ -1,0 +1,30 @@
+# This file is used to configure the python environment for the project
+# It is used by pip to install the required packages
+# The packages are installed in the order they are listed
+
+# Packaging is used to build the package
+packaging
+# Pytest is used to run the tests
+pytest # pytest tests/test_calculator.py
+# Coverage is used to generate a report of the test coverage
+coverage # coverage run -m pytest tests/test_calculator.py
+# Pytest-cov is used to generate a coverage report
+pytest-cov # python3 -m pytest --cov=src
+# Pytest-html is used to generate a html report
+pytest-html # python3 -m pytest / python3 -m pytest --html=./docs/tests/report.html
+# Pylint is used to check the code quality
+pylint # pylint src/calculator.py
+# Flake8 is used to check the code quality
+flake8 # flake8 src/calculator.py
+# Selenium is used to run the tests
+selenium
+# Dotenv is used to load the environment variables
+python-dotenv
+# Pdoc is used to generate the documentation
+pdoc # pdoc src/calculator.py -o ./docs
+# Build is used to build the package for distribution of app
+build # python3 -m build
+# Flask is used to run the web app
+flask
+# Setuptools is used to install the package
+setuptools
